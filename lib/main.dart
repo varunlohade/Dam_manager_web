@@ -1,8 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
-import 'package:floodmanager/Homepage.dart';
+import 'package:floodmanager/screens/home.dart';
 import 'package:flutter/material.dart';
-
-import 'screens/loginScreen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
