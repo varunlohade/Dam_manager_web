@@ -39,6 +39,8 @@ dependencies:
   cloud_firestore: ^2.3.0
   point_in_polygon: ^1.0.0
   http: ^0.13.5
+  twilio_flutter: ^0.0.9
+  firebase_messaging: ^11.1.0
 
 dev_dependencies:
   flutter_test:

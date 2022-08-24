@@ -1,9 +1,13 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:neopop/widgets/buttons/neopop_button/neopop_button.dart';
 import 'package:point_in_polygon/point_in_polygon.dart';
 import 'package:http/http.dart' as http;
+import 'package:twilio_flutter/twilio_flutter.dart';
 
 class HomePage extends StatefulWidget {
   String? location;
@@ -24,6 +28,7 @@ class _HomePageState extends State<HomePage> {
     try {
       var response = await http.get(url);
       RegExp exp = RegExp(r'[+-]?([0-9]*[.])?[0-9]+');
+      print(response.body);
       Iterable<RegExpMatch> x = exp.allMatches(response.body);
       List l = [];
       for (var y in x) {
@@ -44,11 +49,107 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  bool areCoordinatesInside(double x, double y) {
+    return Poly.isPointInPolygon(Point(x: x, y: y), points);
+  }
+
+  TwilioFlutter? twilioFlutter;
+
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
     getCoordinates();
+    twilioFlutter = TwilioFlutter(
+        accountSid: 'AC076195addcb68dc8557cc0f20de099ea',
+        authToken: '7bbfd44972a84f32ae6f6200bd795d0d',
+        twilioNumber: '+13254221345');
+  }
+
+  void sendSms(String number) async {
+    twilioFlutter!.sendSMS(
+        toNumber: number,
+        messageBody:
+            'This message is to let you know that a flood warning is issued in your area');
+  }
+
+  /*Future<bool> callOnFcmApiSendPushNotifications(List<String> userToken) async {
+    final postUrl = 'https://fcm.googleapis.com/fcm/send';
+    final data = {
+      "registration_ids": userToken,
+      "collapse_key": "type_a",
+      "notification": {
+        "title": 'NewTextTitle',
+        "body": 'NewTextBody',
+      }
+    };
+
+    final headers = {
+      'content-type': 'application/json',
+      'Authorization': constant.firebaseTokenAPIFCM // 'key=YOUR_SERVER_KEY'
+    };
+
+    final response = await http.post(Uri.parse(postUrl),
+        body: jsonEncode(data),
+        encoding: Encoding.getByName('utf-8'),
+        headers: headers);
+
+    if (response.statusCode == 200) {
+      print('test ok push CFM');
+      return true;
+    } else {
+      print(' CFM error');
+      return false;
+    }
+  }*/
+
+  void sendPushMessage(String token, String body, String title) async {
+    try {
+      await http.post(
+        Uri.parse('https://fcm.googleapis.com/fcm/send'),
+        headers: <String, String>{
+          'Content-Type': 'application/json',
+          'Authorization':
+              'key=AAAATGzh-UY:APA91bFI9YL6ROWjfShqGVT5BdaXFQpr3kjkudMuAbSIhCtS0WuypihBUT0rU23o64k1-PWiMzD1tSaeRKygHiHqk2FXo_gpqQyFsQ6IFXOyXdpOE-M-ONGsPNo2zsccOETEdbaUEpTZ',
+        },
+        body: jsonEncode(
+          <String, dynamic>{
+            'notification': <String, dynamic>{'body': body, 'title': title},
+            'priority': 'high',
+            'data': <String, dynamic>{
+              'click_action': 'FLUTTER_NOTIFICATION_CLICK',
+              'id': '1',
+              'status': 'done'
+            },
+            "to": token,
+          },
+        ),
+      );
+    } catch (e) {
+      print("error push notification");
+    }
+  }
+
+  void sendNotification(String fcm) async {
+    FirebaseMessaging.instance.sendMessage(to: fcm, data: {
+      'title': 'Hello',
+      'body': 'Hello',
+    });
+  }
+
+  void sendAlerts() {
+    FirebaseFirestore.instance.collection('People').get().then((query) {
+      query.docs.forEach((doc) {
+        if (areCoordinatesInside(double.parse(doc.data()['coordinates'][1]),
+            double.parse(doc.data()['coordinates'][0]))) {
+          print(doc.data()['fcm']);
+          sendPushMessage(doc.data()['fcm'], 'body', 'title');
+          sendSms('${doc.data()['number']}');
+        } else {
+          print('Not inside the region');
+        }
+      });
+    });
   }
 
   @override
@@ -82,7 +183,9 @@ class _HomePageState extends State<HomePage> {
                   NeoPopButton(
                     color: Colors.red,
                     onTapUp: () {},
-                    onTapDown: () {},
+                    onTapDown: () {
+                      sendAlerts();
+                    },
                     child: Padding(
                       padding:
                           EdgeInsets.symmetric(horizontal: 20, vertical: 15),
