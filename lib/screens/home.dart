@@ -105,7 +105,7 @@ class _HomePageState extends State<HomePage> {
 
   void sendPushMessage(String token, String body, String title) async {
     try {
-      await http.post(
+      var response = await http.post(
         Uri.parse('https://fcm.googleapis.com/fcm/send'),
         headers: <String, String>{
           'Content-Type': 'application/json',
@@ -115,26 +115,31 @@ class _HomePageState extends State<HomePage> {
         body: jsonEncode(
           <String, dynamic>{
             'notification': <String, dynamic>{'body': body, 'title': title},
-            'priority': 'high',
+            //'priority': 'high',
+            'android': {'priority': 'high'},
             'data': <String, dynamic>{
               'click_action': 'FLUTTER_NOTIFICATION_CLICK',
               'id': '1',
               'status': 'done'
             },
             "to": token,
+            "apns": {
+              "payload": {
+                "aps": {"contentAvailable": "true"}
+              },
+              "headers": {
+                "apns-push-type": "background",
+                "apns-priority": "5",
+                "apns-topic": "io.flutter.plugins.firebase.messaging"
+              }
+            }
           },
         ),
       );
+      print(response.body);
     } catch (e) {
       print("error push notification");
     }
-  }
-
-  void sendNotification(String fcm) async {
-    FirebaseMessaging.instance.sendMessage(to: fcm, data: {
-      'title': 'Hello',
-      'body': 'Hello',
-    });
   }
 
   void sendAlerts() {
