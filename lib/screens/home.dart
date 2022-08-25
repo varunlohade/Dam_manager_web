@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -20,8 +19,8 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   Point point = Point(x: 75.9231777, y: 17.6689025);
   List<Point> points = [];
-
   bool? isInside;
+
   Future getCoordinates() async {
     var url = Uri.https('floodapisihflutter1234.herokuapp.com', '/Solapur');
     print(url);
@@ -39,7 +38,6 @@ class _HomePageState extends State<HomePage> {
           l = [];
         }
       }
-
       setState(() {
         isInside = Poly.isPointInPolygon(
             Point(x: 75.29679722, y: 17.66192500), points);
@@ -57,7 +55,6 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     getCoordinates();
     twilioFlutter = TwilioFlutter(
@@ -73,37 +70,28 @@ class _HomePageState extends State<HomePage> {
             'This message is to let you know that a flood warning is issued in your area');
   }
 
-  /*Future<bool> callOnFcmApiSendPushNotifications(List<String> userToken) async {
-    final postUrl = 'https://fcm.googleapis.com/fcm/send';
-    final data = {
-      "registration_ids": userToken,
-      "collapse_key": "type_a",
-      "notification": {
-        "title": 'NewTextTitle',
-        "body": 'NewTextBody',
-      }
-    };
-
-    final headers = {
-      'content-type': 'application/json',
-      'Authorization': constant.firebaseTokenAPIFCM // 'key=YOUR_SERVER_KEY'
-    };
-
-    final response = await http.post(Uri.parse(postUrl),
-        body: jsonEncode(data),
-        encoding: Encoding.getByName('utf-8'),
-        headers: headers);
-
-    if (response.statusCode == 200) {
-      print('test ok push CFM');
-      return true;
-    } else {
-      print(' CFM error');
-      return false;
+  /*var data = [
+    {
+      'velocity': 2,
+      'rainfall': 1000,
+      'wind': -2,
+      'size': [10, 15]
     }
-  }*/
+  ];*/
+
+  //var rain = {100: 3, 300: 2.5, 500: 2, 700: 1.5, 1000: 1};
 
   void sendPushMessage(String token, String body, String title) async {
+    NotificationSettings settings =
+        await FirebaseMessaging.instance.requestPermission(
+      alert: true,
+      announcement: false,
+      badge: true,
+      carPlay: false,
+      criticalAlert: false,
+      provisional: false,
+      sound: true,
+    );
     try {
       var response = await http.post(
         Uri.parse('https://fcm.googleapis.com/fcm/send'),
@@ -115,7 +103,6 @@ class _HomePageState extends State<HomePage> {
         body: jsonEncode(
           <String, dynamic>{
             'notification': <String, dynamic>{'body': body, 'title': title},
-            //'priority': 'high',
             'android': {'priority': 'high'},
             'data': <String, dynamic>{
               'click_action': 'FLUTTER_NOTIFICATION_CLICK',
