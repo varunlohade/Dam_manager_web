@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -17,6 +18,10 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  var Discharge = TextEditingController();
+  var Velocity = TextEditingController();
+  var Depth = TextEditingController();
+
   Point point = Point(x: 75.9231777, y: 17.6689025);
   List<Point> points = [];
   bool? isInside;
@@ -129,13 +134,42 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+
+  Future<void> UpdateAlert(String dischargeValue) async {
+    var url = Uri.https('floodapisihflutter1234.herokuapp.com', '/Solapur');
+    print(url);
+    try {
+      var response = await http.get(url);
+      RegExp exp = RegExp(r'[+-]?([0-9]*[.])?[0-9]+');
+      print(response.body);
+      FirebaseFirestore.instance
+          .collection('NDRF')
+          .doc('Solapur')
+          .collection('Alerts')
+          .add({
+        "velocity": 50,
+        "severity": 'Extreme',
+        "RWL": 496,
+        "RWL at flood discharge": dischargeValue,
+        "Coordinates": "${response.body}",
+        "Date": DateTime.now(),
+      });
+    } catch (e) {
+      print('$e');
+    }
+  }
+
   void sendAlerts() {
     FirebaseFirestore.instance.collection('People').get().then((query) {
       query.docs.forEach((doc) {
         if (areCoordinatesInside(double.parse(doc.data()['coordinates'][1]),
-            double.parse(doc.data()['coordinates'][0]))) {
+                double.parse(doc.data()['coordinates'][0])) &&
+            int.parse(Discharge.text) > 6000) {
           print(doc.data()['fcm']);
-          sendPushMessage(doc.data()['fcm'], 'body', 'title');
+          sendPushMessage(
+              doc.data()['fcm'],
+              'This is to notify that a flood warning is been issued in your area',
+              'Flood Alert');
           sendSms('${doc.data()['number']}');
         } else {
           print('Not inside the region');
@@ -162,39 +196,80 @@ class _HomePageState extends State<HomePage> {
           SizedBox(
             height: 40,
           ),
-          Center(
-            child: Align(
-              alignment: Alignment.center,
-              child: Container(
-                  child: Row(
-                children: [
-                  Text(
-                    "Alert button:   ",
-                    style: TextStyle(fontSize: 20),
-                  ),
-                  NeoPopButton(
-                    color: Colors.red,
-                    onTapUp: () {},
-                    onTapDown: () {
-                      sendAlerts();
-                    },
-                    child: Padding(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            "Alert 💀",
-                            style: TextStyle(color: Colors.white),
-                          ),
-                        ],
-                      ),
+          SizedBox(
+            width: 200.0,
+            child: TextField(
+              controller: Discharge,
+              decoration: InputDecoration(
+                border: OutlineInputBorder(),
+                hintText: "Flood Discharge Value",
+              ),
+            ),
+          ),
+          SizedBox(
+            height: 30.0,
+          ),
+          SizedBox(
+            width: 200.0,
+            child: TextField(
+              controller: Velocity,
+              decoration: InputDecoration(
+                border: OutlineInputBorder(),
+                hintText: "Velocity",
+              ),
+            ),
+          ),
+          SizedBox(
+            height: 30.0,
+          ),
+          SizedBox(
+            width: 200.0,
+            child: TextField(
+              controller: Depth,
+              decoration: InputDecoration(
+                border: OutlineInputBorder(),
+                hintText: "Depth",
+              ),
+            ),
+          ),
+          SizedBox(
+            height: 40.0,
+          ),
+
+          SizedBox(
+            height: 40,
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 500.0),
+            child: Container(
+                child: Row(
+              children: [
+                Text(
+                  "Alert button:   ",
+                  style: TextStyle(fontSize: 20),
+                ),
+                NeoPopButton(
+                  color: Colors.red,
+                  onTapUp: () {},
+                  onTapDown: () {
+                    sendAlerts();
+                    UpdateAlert(Discharge.text);
+                  },
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          "Alert 💀",
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              )),
-            ),
+                ),
+              ],
+            )),
           )
         ],
       ),
